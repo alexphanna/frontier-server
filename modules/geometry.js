@@ -1,4 +1,4 @@
-import { points } from "../server.js";
+import { points } from "../index.js";
 
 export class Vertex {
     static adjacentEdges(row, col) {
@@ -56,7 +56,7 @@ export class Vertex {
         }
         else {
             adjacentTiles.push([row - 1, Math.floor(col / 2) - (row <= 2 ? 0 : 1)]);
-            adjacentTiles.push([row - 1, Math.floor(col / 2) - (row <= 2 ? 0 : 1) + 1]);
+            adjacentTiles.push([row - 1, Math.floor(col / 2) - (row <= 2 ? 0 : 1) - (row <= 2 ? 1 : -1)]);
         }
         adjacentTiles = adjacentTiles.filter(tile => tile[0] >= 0 && tile[0] < 5 && tile[1] >= 0 && tile[1] < 5); // 5 can't be constant
 

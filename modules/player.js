@@ -34,14 +34,14 @@ export default class Player {
         const flatResources = Object.entries(this.resources).flatMap(([key, value]) => Array(value).fill(key));
         return flatResources[Math.floor(Math.random() * flatResources.length)];
     }
-    subtractResources(resources) {
-        for (const [key, value] of Object.entries(resources)) {
-            this.resources[key] -= value;
-        }
-    }
     addResources(resources) {
         for (const [key, value] of Object.entries(resources)) {
             this.resources[key] += value;
+        }
+    }
+    subtractResources(resources) {
+        for (const [key, value] of Object.entries(resources)) {
+            this.resources[key] -= value;
         }
     }
     hasResources(resources) {

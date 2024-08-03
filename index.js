@@ -1,4 +1,4 @@
-import start from './modules/utils.js';
+import start from './modules/start.js';
 
 export const points = {
     settlementVertices: [],
