@@ -69,3 +69,29 @@ export function shuffle(array) {
 
     return array;
 }
+
+export function stringifyResources(resources) {
+    let string = '';
+    for (let resource in resources) {
+        string += `${resources[resource]} ${resource}`;
+        if (Object.keys(resources).length == 2) {
+            if (Object.keys(resources).indexOf(resource) == 0) {
+                string += ' and ';
+            }
+        }
+        else if (Object.keys(resources).indexOf(resource) != Object.keys(resources).length - 1) {
+            if (Object.keys(resources).indexOf(resource) == Object.keys(resources).length - 2) {
+                string += ' and ';
+            }
+            else {
+                string += ', ';
+            }
+        }
+    }
+    return string;
+}
+
+export function stringifyTrade(you, them) {
+    let string = stringifyResources(you) + ' → ' + stringifyResources(them);
+    return string;
+}

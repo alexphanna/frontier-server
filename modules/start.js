@@ -3,7 +3,7 @@ import broadcast, { broadcastPoints, broadcastPlayers, log } from './broadcast.j
 import { Vertex, Edge, Tile } from './geometry.js';
 import Player from './player.js';
 import longestRoad from './longest-road.js';
-import { shuffle, generateMap } from './utils.js';
+import { shuffle, generateMap, stringifyResources, stringifyTrade } from './utils.js';
 import { WebSocketServer } from 'ws';
 
 const wss = new WebSocketServer({ port: 8080 });
@@ -153,6 +153,7 @@ export default function start() {
                             }
                         }
                         ws.send('notification Trade offer sent to ' + player.name);
+                        log(args[2] + ' offered ' + stringifyTrade(you, them) +  ' to ' + player.name);
                     }
                     else {
                         for (let i = 0; i < game.players.size; i++) {
@@ -161,6 +162,7 @@ export default function start() {
                             }
                         }
                         ws.send('notification Trade offer sent to everyone');
+                        log(player.name + ' offered ' + stringifyTrade(you, them) + ' to everyone');
                     }
                 }
                 else if (args[1] === 'maritime') {
@@ -207,6 +209,7 @@ export default function start() {
                             continue;
                         }
                         if (isRatio(you, them, i)) {
+                            log(player.name + ' maritime traded ' + stringifyTrade(you, them));
                             player.subtractResources(you);
                             player.addResources(them);
                             broadcastPlayers();
@@ -227,6 +230,7 @@ export default function start() {
                         you.resources[key] = you.resources[key] + value;
                         them.resources[key] = them.resources[key] - value;
                     }
+                    log(you.name + ' and ' + them.name + ' traded ' + stringifyTrade(JSON.parse(args[3]), JSON.parse(args[5])));
                     broadcastPlayers();
                     broadcast(`trade unoffer ${args[6]}`)
                 }
@@ -238,12 +242,20 @@ export default function start() {
                     wool: 1
                 }
                 // check if it is past the initial phase
-                if (game.round < 2) return;
+                if (game.round < 2) {
+                    ws.send('error You may not develop during the initial phase');
+                    return;
+                }
                 // check if player has resources
                 if (!player.hasResources(costs)) {
                     ws.send('error Insufficient resources');
                     return;
                 }
+                if (developments.length === 0) {
+                    ws.send('error No developments left');
+                    return;
+                }
+                log(player.name + ' developed');
                 player.developments[developments.shift()]++;
                 player.subtractResources(costs);
                 broadcastPlayers();
@@ -255,6 +267,7 @@ export default function start() {
                         ws.send('error No monopoly cards left');
                         return;
                     }
+                    log (player.name + ' used monopoly for ' + args[2]);
                     for (let i = 0; i < getPlayerArray().length; i++) {
                         if (i === game.turn % getPlayerArray().length) {
                             continue;
@@ -275,6 +288,7 @@ export default function start() {
                         ws.send('error Must take 2 resources');
                         return;
                     }
+                    log(player.name + ' used year of plenty for ' + stringifyResources(JSON.parse(args[2])));
                     let resources = JSON.parse(args[2]);
                     for (let resource of Object.keys(resources)) {
                         player.resources[resource] += resources[resource];
@@ -288,6 +302,7 @@ export default function start() {
                     }
 
                     roadBuilding = true;
+                    log (player.name + ' used road building');
                 }   
                 player.developments[args[1]]--;
                 broadcastPlayers();
@@ -299,6 +314,7 @@ export default function start() {
                     return;
                 }
                 if (args.length === 1) {
+                    log(player.name + ' used a knight');
                     knight = true;
                     player.developments["knight"]--;
                     player.army++;
@@ -334,6 +350,11 @@ export default function start() {
                     }
 
                     if (game.round < 2) {
+                        // check if it's the player's turn
+                        if (Array.from(game.clients).indexOf(ws) !== game.turn % game.players.size) {
+                            ws.send('error It is not your turn');
+                            return;
+                        }
                         // check if settlement is legal
                         if (!isNaN(points.settlementVertices[row][col])) {
                             ws.send('error Illegal settlement placement');
@@ -360,12 +381,9 @@ export default function start() {
                         // give player resources on round two
                         if (game.round === 1) {
                             const adjacentTiles = Vertex.adjacentTiles(row, col);
-                            console.log(adjacentTiles);
                             for (let j = 0; j < adjacentTiles.length; j++) {
                                 const tile = adjacentTiles[j];
                                 if (map.terrainMap[tile[0]][tile[1]] !== "Desert") {
-                                    console.log(map.terrainMap[tile[0]][tile[1]]);
-                                    console.log(terrainToResource[map.terrainMap[tile[0]][tile[1]]]);
                                     player.resources[terrainToResource[map.terrainMap[tile[0]][tile[1]]]]++;
                                 }
                             }
@@ -515,6 +533,7 @@ export default function start() {
 
                     // Update longest road
                     let road = longestRoad();
+                    console.log("longestRoad: " + road.player.name + " " + road.length);
                     if (road.length >= 5) {
                         for (let i = 0; i < game.players.size; i++) {
                             if (getPlayerArray()[i].specials["longestRoad"]) {
@@ -637,6 +656,7 @@ export default function start() {
                         ws.send(`error You must build a road during round ${["one", "two"][game.round]}`);
                     }
                     else {
+                        log (player.name + ' ended their turn');
                         game.turn++;
                         game.round = Math.floor(game.turn / game.players.size);
                     }
@@ -644,6 +664,7 @@ export default function start() {
                     Array.from(game.clients)[game.round === 1 ? game.players.size - 1 - (game.turn % game.players.size) : game.turn % game.players.size].send('start turn');
                 }
                 else {
+                    log(player.name + ' ended their turn');
                     game.turn++;
                     game.round = Math.floor(game.turn / game.players.size);
                     // roll dice

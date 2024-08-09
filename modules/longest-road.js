@@ -12,6 +12,9 @@ export default function longestRoad() {
 
     for (let i = 0; i < buildings.settlements.length; i++) {
         for (let j = 0; j < buildings.settlements[i].length; j++) {
+            if (isNaN(buildings.settlements[i][j])) {
+                continue;
+            }
             let currentPlayer = buildings.settlements[i][j];
             let roadLength = countRoad(i, j, currentPlayer);
 
