@@ -13,12 +13,14 @@ export class Vertex {
         if (row <= 2 && row >= 0) {
             edges.push([row * 2 + (col % 2 == 1 ? -1 : 1), Math.floor(col / 2)]);
         }
-        else if (row >= 3 && row < points.settlementVertices.length - 1) {
+        else if (row >= 3 && row < points.settlementVertices.length) {
             edges.push([row * 2 + (col % 2 == 1 ? 1 : -1), Math.floor(col / 2)]);
         }
 
         // remove negatives
         edges = edges.filter(edge => edge[0] >= 0 && edge[1] >= 0);
+        // remove out of bounds
+        edges = edges.filter(edge => edge[0] < points.roadEdges.length && edge[1] < points.roadEdges[edge[0]].length);
 
         // remove repeats
         for (let i = 0; i < edges.length; i++) {

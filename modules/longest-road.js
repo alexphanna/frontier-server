@@ -10,6 +10,10 @@ export default function longestRoad() {
     let maxLength = 0;
     let longestPlayer = null;
 
+    // debug #0 - check if the settlements and roads are being stored correctly
+    console.log(buildings.settlements);
+    console.log(buildings.roads);
+
     for (let i = 0; i < buildings.settlements.length; i++) {
         for (let j = 0; j < buildings.settlements[i].length; j++) {
             if (isNaN(buildings.settlements[i][j])) {
@@ -17,6 +21,9 @@ export default function longestRoad() {
             }
             let currentPlayer = buildings.settlements[i][j];
             let roadLength = countRoad(i, j, currentPlayer);
+
+            // debug #1 - check if the road length is calculated correctly
+            console.log(`${i}, ${j}  road length: ${roadLength}`);
 
             if (roadLength > maxLength) {
                 maxLength = roadLength;
@@ -55,7 +62,10 @@ function countRoad(row, col, player, prevEdgeRow = -1, prevEdgeCol = -1) {
         let maxLength = 1;
 
         for (let vertex of adjacentVertices) {
-            if (vertex[0] !== row || vertex[1] !== col) {
+            if (!isNaN(buildings.settlements[vertex[0]][vertex[1]]) && buildings.settlements[vertex[0]][vertex[1]] !== player) {
+                continue;
+            }
+            else if (vertex[0] !== row || vertex[1] !== col) {
                 maxLength += countRoad(vertex[0], vertex[1], player, edge[0], edge[1]);
             }
         }

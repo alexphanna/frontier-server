@@ -361,12 +361,13 @@ export default function start() {
                         wool: 1
                     }
 
+                    // check if it is the player's turn
+                    if (Array.from(game.clients).indexOf(ws) !== (game.round === 1 ? game.players.size - 1 - (game.turn % game.players.size) : game.turn % game.players.size)) {
+                        ws.send('error It is not your turn');
+                        return;
+                    }
+
                     if (game.round < 2) {
-                        // check if it's the player's turn
-                        if (Array.from(game.clients).indexOf(ws) !== game.turn % game.players.size) {
-                            ws.send('error It is not your turn');
-                            return;
-                        }
                         // check if settlement is legal
                         if (!isNaN(points.settlementVertices[row][col])) {
                             ws.send('error Illegal settlement placement');
@@ -385,7 +386,7 @@ export default function start() {
                             if (isNaN(points.roadEdges[edge[0]][edge[1]])) {
                                 points.roadEdges[edge[0]][edge[1]] = [game.round === 1 ? game.players.size - 1 - (game.turn % game.players.size) : game.turn % game.players.size];
                             }
-                            else if (points.roadEdges[edge[0]][edge[1]] != (game.round === 1 ? game.players.size - 1 - (game.turn % game.players.size) : game.turn % game.players.size)) {
+                            else if (!points.roadEdges[edge[0]][edge[1]].includes(game.round === 1 ? game.players.size - 1 - (game.turn % game.players.size) : game.turn % game.players.size)) {
                                 points.roadEdges[edge[0]][edge[1]].push(game.round === 1 ? game.players.size - 1 - (game.turn % game.players.size) : game.turn % game.players.size)
                             }
                         }
@@ -429,8 +430,8 @@ export default function start() {
                     player.points++;
                     player.buildings["settlements"]--;
                     points.settlementVertices[row][col] = game.players.size;
-                    buildings.settlements[row][col] = game.round === 1 ? game.players.size - 1 - (game.turn % game.players.size) : game.turn % game.players.size;
-                    points.cityVertices[row][col] = game.round === 1 ? game.players.size - 1 - (game.turn % game.players.size) : game.turn % game.players.size;
+                    buildings.settlements[row][col] = (game.round === 1 ? game.players.size - 1 - (game.turn % game.players.size) : game.turn % game.players.size);
+                    points.cityVertices[row][col] = (game.round === 1 ? game.players.size - 1 - (game.turn % game.players.size) : game.turn % game.players.size);
 
                     // check if settlement is placed on a harbor
                     const adjacentEdges = Vertex.adjacentEdges(row, col);
@@ -541,7 +542,7 @@ export default function start() {
                     log(player.name + ' built a road');
                     player.buildings["roads"]--;
                     points.roadEdges[row][col] = game.players.size;
-                    buildings.roads[row][col] = game.turn % game.players.size;
+                    buildings.roads[row][col] = (game.round === 1 ? game.players.size - 1 - (game.turn % game.players.size) : game.turn % game.players.size);
 
                     // Update longest road
                     let road = longestRoad();
