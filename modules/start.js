@@ -3,7 +3,7 @@ import broadcast, { broadcastPoints, broadcastPlayers, log } from './broadcast.j
 import { Vertex, Edge, Tile } from './geometry.js';
 import Player from './player.js';
 import longestRoad from './longest-road.js';
-import { shuffle, generateMap, stringifyResources, stringifyTrade } from './utils.js';
+import { shuffle, generateMap, stringifyResources, stringifyTrade, joinWithAnd } from './utils.js';
 import { WebSocketServer } from 'ws';
 
 const wss = new WebSocketServer({ port: 8080 });
@@ -140,7 +140,7 @@ export default function start() {
 
                 if (args[1] === 'domestic') {
                     const you = JSON.parse(args[3]);
-                    const them = JSON.parse(args[4]);
+                    const them = JSON.parse(args[5]);
 
                     if (!isTradeLegal(you, them)) {
                         return;
@@ -149,20 +149,32 @@ export default function start() {
                     if (player.name !== args[2]) {
                         for (let i = 0; i < game.players.size; i++) {
                             if (Array.from(game.players)[i].name === player.name) {
-                                Array.from(game.clients)[i].send(`trade domestic ${args[2]} ${args[3]} ${args[4]} ${args[5]}`);
+                                Array.from(game.clients)[i].send(`trade domestic ${args[2]} ${args[3]} ${args[4]} ${args[5]} ${args[6]}`);
                             }
                         }
                         ws.send('notification Trade offer sent to ' + player.name);
                         log(args[2] + ' offered ' + stringifyTrade(you, them) +  ' to ' + player.name);
                     }
                     else {
+                        let players = JSON.parse(args[4]);
                         for (let i = 0; i < game.players.size; i++) {
-                            if (Array.from(game.players)[i].name !== args[2]) {
-                                Array.from(game.clients)[i].send(`trade domestic ${args[2]} ${args[3]} ${args[4]} ${args[5]}`);
+                            if (Array.from(game.players)[i].name === args[2]) {
+                                continue;
                             }
+                            if (!players.includes(Array.from(game.players)[i].name)) {
+                                continue;
+                            }
+
+                            Array.from(game.clients)[i].send(`trade domestic ${args[2]} ${args[3]} ${args[4]} ${args[5]} ${args[6]}`);
                         }
-                        ws.send('notification Trade offer sent to everyone');
-                        log(player.name + ' offered ' + stringifyTrade(you, them) + ' to everyone');
+                        if (players.length ===  game.players.size - 1) {
+                            ws.send('notification Trade offer sent to everyone');
+                            log(player.name + ' offered ' + stringifyTrade(you, them) + ' to everyone');
+                        }
+                        else {
+                            ws.send('notification Trade offer sent to ' + joinWithAnd(players));
+                            log(player.name + ' offered ' + stringifyTrade(you, them) + ' to ' + joinWithAnd(players));
+                        }
                     }
                 }
                 else if (args[1] === 'maritime') {

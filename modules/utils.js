@@ -70,25 +70,24 @@ export function shuffle(array) {
     return array;
 }
 
-export function stringifyResources(resources) {
-    let string = '';
-    for (let resource in resources) {
-        string += `${resources[resource]} ${resource}`;
-        if (Object.keys(resources).length == 2) {
-            if (Object.keys(resources).indexOf(resource) == 0) {
-                string += ' and ';
-            }
-        }
-        else if (Object.keys(resources).indexOf(resource) != Object.keys(resources).length - 1) {
-            if (Object.keys(resources).indexOf(resource) == Object.keys(resources).length - 2) {
-                string += ' and ';
-            }
-            else {
-                string += ', ';
-            }
-        }
+export function joinWithAnd(array) {
+    if (array.length == 0) {
+        return '';
     }
-    return string;
+    else if (array.length == 1) {
+        return array[0];
+    }
+    else {
+        return array.slice(0, -1).join(', ') + ' and ' + array[array.length - 1];
+    }
+}
+
+export function stringifyResources(resources) {
+    let resourcesArray = [];
+    for (let resource in resources) {
+        resourcesArray.push(`${resources[resource]} ${resource}`);
+    }
+    return joinWithAnd(resourcesArray);
 }
 
 export function stringifyTrade(you, them) {
