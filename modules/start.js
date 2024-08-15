@@ -9,7 +9,8 @@ import { WebSocketServer } from 'ws';
 const wss = new WebSocketServer({ port: 8080 });
 
 export default function start() {
-    let colors = shuffle(["red", "orange", "yellow", "lime", "blue", "magenta"]);
+    let colors = shuffle(["red", "yellow", "lime", "magenta"]);
+    console.log(colors)
     let map = generateMap();
 
     let robber = [];
@@ -103,6 +104,7 @@ export default function start() {
                 if (game.ready.size === game.players.size) {
                     broadcast('start game')
                     Array.from(game.clients)[0].send('start turn');
+                    broadcast('turn ' + game.turn);
                 }
             }
             else if (args[0] === 'unready') {
@@ -675,6 +677,7 @@ export default function start() {
                     }
 
                     Array.from(game.clients)[game.round === 1 ? game.players.size - 1 - (game.turn % game.players.size) : game.turn % game.players.size].send('start turn');
+                    broadcast('turn ' + game.turn)
                 }
                 else {
                     log(player.name + ' ended their turn');
@@ -682,6 +685,7 @@ export default function start() {
                     game.round = Math.floor(game.turn / game.players.size);
                     // roll dice
                     Array.from(game.clients)[game.turn % game.players.size].send('start turn');
+                    broadcast('turn ' + game.turn);
                     var roll = Math.floor(Math.random() * 6 + 1) + Math.floor(Math.random() * 6 + 1);
                     broadcast('roll ' + roll);
 
