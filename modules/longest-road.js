@@ -7,10 +7,10 @@ import { Vertex, Edge } from './geometry.js';
  * @returns {Object} An object containing the length of the longest road and the player who owns it.
  */
 
-let prevEdges = [];
-let loops = 0;
-
 export default function longestRoad() {
+    // last things to to with longestRoad later:
+    // check for buildings in road
+
     let maxLength = 0;
     let longestPlayer = null;
 
@@ -20,94 +20,147 @@ export default function longestRoad() {
                 continue;
             }
             let currentPlayer = isNaN(buildings.settlements[i][j]) ? buildings.cities[i][j] : buildings.settlements[i][j];
-            let roadLength = countRoad(i, j, currentPlayer) - Math.floor(loops) - (loops > 1 ? 1 : 0);
-            prevEdges = [];
-            loops = 0;
+            let roads = removeDuplicates(getRoads(i, j, currentPlayer));
 
-            // debug #1 - check if the road length is calculated correctly
-            console.log(`${i}, ${j}  road length: ${roadLength}`);
+            let length = 0;
 
-            if (roadLength > maxLength) {
-                maxLength = roadLength;
-                longestPlayer = getPlayerArray()[currentPlayer];
+            for (let i = 0; i < roads.length; i++) {
+                for (let j = i + 1; j < roads.length; j++) {
+                    let overlappingRoads = overlap(roads[i], roads[j]);
+                    if (overlappingRoads.length > 1) {
+                        continue;
+                    }
+                    if (overlappingRoads.length === 1 && roads[i].indexOf(overlappingRoads[0]) !== roads[i].length - 1 && roads[j].indexOf(overlappingRoads[0]) !== roads[j].length - 1) {
+                        continue;
+                    }
+
+                    length = roads[i].length + roads[j].length - overlappingRoads.length;
+                    if (length > maxLength) {
+                        maxLength = length;
+                        longestPlayer = getPlayerArray()[currentPlayer];
+                    }
+                }
             }
+
+            // if there are no roads that don't overlap
+            if (length == 0) {
+                for (let i = 0; i < roads.length; i++) {
+                    for (let j = i; j < roads.length; j++) {
+                        let uniqueRoads = [];
+                        for (let road of roads[i].concat(roads[j])) {
+                            let edgeFound = false;
+                            for (let uniqueRoad of uniqueRoads) {
+                                if (uniqueRoad[0] === road[0] && uniqueRoad[1] === road[1]) {
+                                    edgeFound = true;
+                                    break;
+                                }
+                            }
+                            if (!edgeFound) {
+                                uniqueRoads.push(road);
+                            }
+                        }
+
+                        if (uniqueRoads.length > maxLength) {
+                            maxLength = uniqueRoads.length;
+                            longestPlayer = getPlayerArray()[currentPlayer];
+                        }
+                    }
+                }
+            }
+
+            console.log("length: " + maxLength);
+            console.log("player: " + longestPlayer);
         }
     }
 
     return { length: maxLength, player: longestPlayer };
 }
 
-/**
- * Counts the length of the road for a given player starting from a specific row and column.
- * 
- * @param {number} row - The row index of the starting position.
- * @param {number} col - The column index of the starting position.
- * @param {string} player - The player for whom the road length is being counted.
- * @param {Array} prevEdges - The edges that have already been visited.
- * @returns {number} - The length of the road for the given player.
- */
-
-function countRoad(row, col, player, prevEdgeRow = -1, prevEdgeCol = -1) {
-    let nextRoads = [];
-    let adjacentEdges = Vertex.adjacentEdges(row, col);
-
-    let settlementsAndCities = [];
-    for (let i = 0; i < buildings.settlements.length; i++) {
-        settlementsAndCities.push([]);
-        for (let j = 0; j < buildings.settlements[i].length; j++) {
-            if (!isNaN(buildings.settlements[i][j])) {
-                settlementsAndCities[i].push(buildings.settlements[i][j]);
+function overlap(firstRoad, secondRoad) {
+    let overlappingRoads = [];
+    for (let road1 of firstRoad) {
+        for (let road2 of secondRoad) {
+            if (road1[0] === road2[0] && road1[1] === road2[1]) {
+                overlappingRoads.push(road1);
             }
-            else if (!isNaN(buildings.cities[i][j])) {
-                settlementsAndCities[i].push(buildings.cities[i][j]);
+        }
+    }
+    return overlappingRoads;
+}
+
+function removeDuplicates(roads) {
+    for (let i = 0; i < roads.length; i++) {
+        for (let j = i + 1; j < roads.length; j++) {
+            if (roads[i].length !== roads[j].length) {
+                continue;
             }
-            else {
-                settlementsAndCities[i].push(NaN);
+            let duplicate = true;
+            for (let road of roads[i]) {
+                let includesRoad = false;
+                for (let road2 of roads[j]) {
+                    if (road[0] === road2[0] && road[1] === road2[1]) {
+                        includesRoad = true;
+                        break;
+                    }
+                }
+                if (!includesRoad) {
+                    duplicate = false;
+                    break;
+                }
+            }
+
+            if (duplicate) {
+                roads.splice(j, 1);
+                j--;
             }
         }
     }
 
-    for (let edge of adjacentEdges) {
-        if (edge[0] === prevEdgeRow && edge[1] === prevEdgeCol) {
-            continue;
+    return roads;
+}
+
+function getRoads(row, col, player, roads = []) {
+    let nextRoads = getNextRoads(row, col, player, roads);
+
+    let combinations = [];
+
+    for (let road of nextRoads) {
+        const vertices = Edge.adjacentVertices(road[0], road[1]);
+
+        for (let vertex of vertices) {
+            if (vertex[0] === row && vertex[1] === col) {
+                continue;
+            }
+
+            combinations = combinations.concat(getRoads(vertex[0], vertex[1], player, roads.concat([road])));
         }
-        let edgeVisited = false;
+    }
+
+    if (combinations.length === 0) {
+        return [roads];
+    }
+    return combinations;
+}
+
+function getNextRoads(row, col, player, prevEdges) {
+    let nextRoads = [];
+    let adjcaentEdges = Vertex.adjacentEdges(row, col);
+
+    for (let edge of adjcaentEdges) {
+        let edgeFound = false;
         for (let prevEdge of prevEdges) {
-            if (edge[0] === prevEdge[0] && edge[1] === prevEdge[1]) {
-                edgeVisited = true;
-                loops += 1 / Math.floor(loops + 2);
+            if (prevEdge[0] === edge[0] && prevEdge[1] === edge[1]) {
+                edgeFound = true;
+                break;
             }
         }
-        if (!edgeVisited && buildings.roads[edge[0]][edge[1]] === player) {
+        if (edgeFound) {
+            continue;
+        }
+        if (buildings.roads[edge[0]][edge[1]] === player) {
             nextRoads.push(edge);
         }
     }
 
-    if (nextRoads.length === 0) return 0;
-
-    let roadLengths = nextRoads.map(edge => {
-        let adjacentVertices = Edge.adjacentVertices(edge[0], edge[1]);
-        let maxLength = 1;
-
-        for (let vertex of adjacentVertices) {
-            if (!isNaN(settlementsAndCities[vertex[0]][vertex[1]]) && settlementsAndCities[vertex[0]][vertex[1]] !== player) {
-                continue;
-            }
-            else if (vertex[0] !== row || vertex[1] !== col) {
-                prevEdges = prevEdges.concat([[edge[0], edge[1]]]);
-                maxLength += countRoad(vertex[0], vertex[1], player, edge[0], edge[1]);
-            }
-        }
-
-        return maxLength;
-    });
-
-    roadLengths = roadLengths.sort((a, b) => b - a);
-    let firstMax = roadLengths[0];
-    let secondMax = roadLengths.length > 1 ? roadLengths[1] : 0;
-
-    console.log(firstMax, secondMax, Math.floor(loops));
-    // solution:
-    // if the road is a loop, the length has to be subtracted by the (number of loops * 2) - 1
-    return firstMax + secondMax;
+    return nextRoads;
 }
