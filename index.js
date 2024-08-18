@@ -17,7 +17,12 @@ export const game = {
     clients: new Set(),
     ready: new Set(),
     turn: 0,
-    round: 0
+    round: 0,
+    longestRoad: {
+        length: 0,
+        player: null
+    },
+    map: null
 }
 
 export function getPlayerArray() {

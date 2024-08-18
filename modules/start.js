@@ -11,12 +11,12 @@ const wss = new WebSocketServer({ port: 8080 });
 export default function start() {
     let colors = shuffle(["red", "yellow", "lime", "magenta"]);
     console.log(colors)
-    let map = generateMap();
+    game.map = generateMap();
 
     let robber = [];
-    for (let i = 0; i < map.terrainMap.length; i++) {
-        for (let j = 0; j < map.terrainMap[i].length; j++) {
-            if (map.terrainMap[i][j] === "Desert") {
+    for (let i = 0; i < game.map.terrainMap.length; i++) {
+        for (let j = 0; j < game.map.terrainMap[i].length; j++) {
+            if (game.map.terrainMap[i][j] === "Desert") {
                 robber = [i, j];
                 break;
             }
@@ -37,9 +37,9 @@ export default function start() {
     };
     let developments = shuffle(Object.keys(developmentDistr).map(development => Array(developmentDistr[development]).fill(development)).flat());
     
-    for (let i = Math.ceil(map.terrainMap.length / 2) - 1; i >= 0; i--) {
+    for (let i = Math.ceil(game.map.terrainMap.length / 2) - 1; i >= 0; i--) {
         let temp = [];
-        for (let j = 0; j < map.terrainMap[i].length * 2 + 1; j++) {
+        for (let j = 0; j < game.map.terrainMap[i].length * 2 + 1; j++) {
             temp.push(NaN);
         }
         points.settlementVertices.unshift(Array.from(temp));
@@ -52,18 +52,18 @@ export default function start() {
         buildings.cities.push(Array.from(temp));
     }
 
-    for (let i = Math.ceil(map.terrainMap.length / 2) - 1; i >= 0; i--) {
+    for (let i = Math.ceil(game.map.terrainMap.length / 2) - 1; i >= 0; i--) {
         let temp1 = [];
         let temp2 = [];
-        for (let j = 0; j < map.terrainMap[i].length * 2; j++) {
-            if (j < map.terrainMap[i].length + 1) {
+        for (let j = 0; j < game.map.terrainMap[i].length * 2; j++) {
+            if (j < game.map.terrainMap[i].length + 1) {
                 temp1.push(NaN);
             }
             temp2.push(NaN);
         }
         points.roadEdges.push(Array.from(temp1));
         buildings.roads.push(Array.from(temp1));
-        if (i != Math.ceil(map.terrainMap.length / 2) - 1) {
+        if (i != Math.ceil(game.map.terrainMap.length / 2) - 1) {
             points.roadEdges.unshift(Array.from(temp1));
             buildings.roads.unshift(Array.from(temp1));
         }
@@ -95,7 +95,7 @@ export default function start() {
                 ws.send('color ' + colors[game.players.size]);
                 game.players.add(new Player(args[1], colors[game.players.size]));
                 game.clients.add(ws);
-                ws.send('map ' + JSON.stringify(map));
+                ws.send('map ' + JSON.stringify(game.map));
                 broadcastPlayers();
                 broadcastPoints();
             }
@@ -398,8 +398,8 @@ export default function start() {
                             const adjacentTiles = Vertex.adjacentTiles(row, col);
                             for (let j = 0; j < adjacentTiles.length; j++) {
                                 const tile = adjacentTiles[j];
-                                if (map.terrainMap[tile[0]][tile[1]] !== "Desert") {
-                                    player.resources[terrainToResource[map.terrainMap[tile[0]][tile[1]]]]++;
+                                if (game.map.terrainMap[tile[0]][tile[1]] !== "Desert") {
+                                    player.resources[terrainToResource[game.map.terrainMap[tile[0]][tile[1]]]]++;
                                 }
                             }
                         }
@@ -439,8 +439,8 @@ export default function start() {
                     const adjacentEdges = Vertex.adjacentEdges(row, col);
                     for (let i = 0; i < adjacentEdges.length; i++) {
                         const edge = adjacentEdges[i];
-                        if (map.harborMap[edge[0]][edge[1]] != 0) {
-                            player.harbors.push(map.harborMap[edge[0]][edge[1]]);
+                        if (game.map.harborMap[edge[0]][edge[1]] != 0) {
+                            player.harbors.push(game.map.harborMap[edge[0]][edge[1]]);
                         }
                     }
 
@@ -546,20 +546,6 @@ export default function start() {
                     points.roadEdges[row][col] = game.players.size;
                     buildings.roads[row][col] = (game.round === 1 ? game.players.size - 1 - (game.turn % game.players.size) : game.turn % game.players.size);
 
-                    // Update longest road
-                    let road = longestRoad();
-                    console.log("longestRoad: " + road.player.name + " " + road.length);
-                    if (road.length >= 5) {
-                        for (let i = 0; i < game.players.size; i++) {
-                            if (getPlayerArray()[i].specials["longestRoad"]) {
-                                getPlayerArray()[i].specials["longestRoad"] = false;
-                                getPlayerArray()[i].points -= 2;
-                            }
-                        }
-                        road.player.specials["longestRoad"] = true;
-                        road.player.points += 2;
-                    }
-
                     const adjacentVertices = Edge.adjacentVertices(row, col);
                     for (let i = 0; i < adjacentVertices.length; i++) {
                         const adjacentEdges = Vertex.adjacentEdges(adjacentVertices[i][0], adjacentVertices[i][1]);
@@ -606,13 +592,32 @@ export default function start() {
                         }
                     }
                 }
+                
+                // Update longest road
+                let road = longestRoad();
+                if (road.length !== game.longestRoad.length) {
+                    for (let i = 0; i < game.players.size; i++) {
+                        getPlayerArray()[i].specials["longestRoad"] = false;
+                        if (getPlayerArray()[i].specials["longestRoad"]) getPlayerArray()[i].points -= 2;
+                    }
+                    if (road.length >= 5) {
+                        game.longestRoad.length = road.length;
+                        game.longestRoad.player = road.player;
+                        road.player.specials["longestRoad"] = true;
+                        road.player.points += 2;
+                    }
+                    else if (road.length < 5) {
+                        game.longestRoad.length = 0;
+                        game.longestRoad.player = null;
+                    }
+                }
 
                 broadcastPoints();
                 broadcastPlayers();
             }
             else if (args[0] === 'get') {
                 if (args[1] === 'map') {
-                    ws.send('map ' + JSON.stringify(map));
+                    ws.send('map ' + JSON.stringify(game.map));
                 }
                 else if (args[1] === 'points') {
                     broadcastPoints();
@@ -626,7 +631,7 @@ export default function start() {
                     robber = [parseInt(args[1]), parseInt(args[2])];
 
                     // check if robber is moved to desert
-                    if (map.terrainMap[robber[0]][robber[1]] === "Desert") {
+                    if (game.map.terrainMap[robber[0]][robber[1]] === "Desert") {
                         ws.send('error Robber cannot be moved to desert');
                         return;
                     }
@@ -689,20 +694,20 @@ export default function start() {
                     var roll = Math.floor(Math.random() * 6 + 1) + Math.floor(Math.random() * 6 + 1);
                     broadcast('roll ' + roll);
 
-                    for (let i = 0; i < map.terrainMap.length; i++) {
-                        for (let j = 0; j < map.terrainMap[i].length; j++) {
-                            if (map.numberMap[i][j] === roll && (i != robber[0] || j != robber[1])) {
+                    for (let i = 0; i < game.map.terrainMap.length; i++) {
+                        for (let j = 0; j < game.map.terrainMap[i].length; j++) {
+                            if (game.map.numberMap[i][j] === roll && (i != robber[0] || j != robber[1])) {
                                 const vertices = Tile.adjacentVertices(i, j);
                                 for (let k = 0; k < vertices.length; k++) {
                                     const settlement = buildings.settlements[vertices[k][0]][vertices[k][1]];
                                     const city = buildings.cities[vertices[k][0]][vertices[k][1]];
                                     if (!isNaN(settlement)) {
                                         const player = getPlayerArray()[settlement];
-                                        player.resources[terrainToResource[map.terrainMap[i][j]]] += 1;
+                                        player.resources[terrainToResource[game.map.terrainMap[i][j]]] += 1;
                                     }
                                     if (!isNaN(city)) {
                                         const player = getPlayerArray()[city];
-                                        player.resources[terrainToResource[map.terrainMap[i][j]]] += 2;
+                                        player.resources[terrainToResource[game.map.terrainMap[i][j]]] += 2;
                                     }
                                 }
                             }
