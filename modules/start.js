@@ -13,6 +13,8 @@ export default function start() {
     console.log(colors)
     game.map = generateMap();
 
+    let roll = 0;
+
     let robber = [];
     for (let i = 0; i < game.map.terrainMap.length; i++) {
         for (let j = 0; j < game.map.terrainMap[i].length; j++) {
@@ -22,6 +24,7 @@ export default function start() {
             }
         }
     }
+    let robberMoved = false;
 
     let roadBuilding = false;
     let roadsBuilt = 0;
@@ -321,27 +324,30 @@ export default function start() {
                 player.developments[args[1]]--;
                 broadcastPlayers();
             }
-            else if (args[0] === 'knight') {
-                // check if player has knight card
-                if (player.developments["knight"] === 0) {
-                    ws.send('error No knight cards left');
-                    return;
-                }
+            else if (args[0] === 'knight' || args[0] === 'rob') {
                 if (args.length === 1) {
-                    log(player.name + ' used a knight');
-                    knight = true;
-                    player.developments["knight"]--;
-                    player.army++;
-                    if (player.army >= largestArmyMin) {
-                        largestArmyMin = player.army + 1;
-                        for (let i = 0; i < game.players.size; i++) {
-                            if (getPlayerArray()[i].specials["largestArmy"]) {
-                                getPlayerArray()[i].specials["largestArmy"] = false;
-                                getPlayerArray()[i].points -= 2;
-                            }
+                    if (args[0] === 'knight') {
+                        // check if player has knight card
+                        if (player.developments["knight"] === 0) {
+                            ws.send('error No knight cards left');
+                            return;
                         }
-                        player.specials["largestArmy"] = true;
-                        player.points += 2;
+
+                        log(player.name + ` used a knight`);
+                        knight = true;
+                        player.developments["knight"]--;
+                        player.army++;
+                        if (player.army >= largestArmyMin) {
+                            largestArmyMin = player.army + 1;
+                            for (let i = 0; i < game.players.size; i++) {
+                                if (getPlayerArray()[i].specials["largestArmy"]) {
+                                    getPlayerArray()[i].specials["largestArmy"] = false;
+                                    getPlayerArray()[i].points -= 2;
+                                }
+                            }
+                            player.specials["largestArmy"] = true;
+                            player.points += 2;
+                        }
                     }
                 }
                 else {
@@ -627,35 +633,28 @@ export default function start() {
                 }
             }
             else if (args[0] === 'robber') {
-                if (roll === 7 || knight) {
+                if ((roll === 7 && !robberMoved) || knight) {
                     robber = [parseInt(args[1]), parseInt(args[2])];
 
-                    // check if robber is moved to desert
-                    if (game.map.terrainMap[robber[0]][robber[1]] === "Desert") {
-                        ws.send('error Robber cannot be moved to desert');
-                        return;
-                    }
+                    knight = false;
+                    let adjacentPlayers = [];
 
-                    if (knight) {
-                        knight = false;
-                        let adjacentPlayers = [];
-
-                        const vertices = Tile.adjacentVertices(robber[0], robber[1]);
-                        for (let i = 0; i < vertices.length; i++) {
-                            if (!isNaN(buildings.settlements[vertices[i][0]][vertices[i][1]]) && buildings.settlements[vertices[i][0]][vertices[i][1]] != game.turn % game.players.size) {
-                                adjacentPlayers.push(getPlayerArray()[buildings.settlements[vertices[i][0]][vertices[i][1]]].name);
-                            }
-                            else if (!isNaN(buildings.cities[vertices[i][0]][vertices[i][1]]) && buildings.cities[vertices[i][0]][vertices[i][1]] != game.turn % game.players.size) {
-                                adjacentPlayers.push(getPlayerArray()[buildings.cities[vertices[i][0]][vertices[i][1]]].name);
-                            }
+                    const vertices = Tile.adjacentVertices(robber[0], robber[1]);
+                    for (let i = 0; i < vertices.length; i++) {
+                        if (!isNaN(buildings.settlements[vertices[i][0]][vertices[i][1]]) && buildings.settlements[vertices[i][0]][vertices[i][1]] != game.turn % game.players.size) {
+                            adjacentPlayers.push(getPlayerArray()[buildings.settlements[vertices[i][0]][vertices[i][1]]].name);
                         }
-                        
-                        // remove duplicates
-                        adjacentPlayers = Array.from(new Set(adjacentPlayers));
-
-                        ws.send(`knight ${JSON.stringify(adjacentPlayers)}`);
+                        else if (!isNaN(buildings.cities[vertices[i][0]][vertices[i][1]]) && buildings.cities[vertices[i][0]][vertices[i][1]] != game.turn % game.players.size) {
+                            adjacentPlayers.push(getPlayerArray()[buildings.cities[vertices[i][0]][vertices[i][1]]].name);
+                        }
                     }
+                    
+                    // remove duplicates
+                    adjacentPlayers = Array.from(new Set(adjacentPlayers));
+
+                    ws.send(`rob ${JSON.stringify(adjacentPlayers)}`);
                     broadcast(String(message));
+                    robberMoved = true;
                 }
             }
             else if (args[0] === 'chat') {
@@ -688,10 +687,12 @@ export default function start() {
                     log(player.name + ' ended their turn');
                     game.turn++;
                     game.round = Math.floor(game.turn / game.players.size);
+                    robberMoved = false;
                     // roll dice
                     Array.from(game.clients)[game.turn % game.players.size].send('start turn');
                     broadcast('turn ' + game.turn);
-                    var roll = Math.floor(Math.random() * 6 + 1) + Math.floor(Math.random() * 6 + 1);
+                    //roll = Math.floor(Math.random() * 6 + 1) + Math.floor(Math.random() * 6 + 1);
+                    roll = 7;
                     broadcast('roll ' + roll);
 
                     for (let i = 0; i < game.map.terrainMap.length; i++) {

@@ -1,10 +1,10 @@
-# Catan Server
-Node.js server for [Catan](https://github.com/alexphanna/catan)
+# Frontier Server
+Node.js server for [Frontier](https://github.com/alexphanna/frontier)
 ## Requirements
 - [Node.js](https://nodejs.org/en/download)
 ## Installing and starting
 ```bash
-git clone https://github.com/alexphanna/catan-server.git
+git clone https://github.com/alexphanna/frontier-server.git
 cd catan-server
 node index.js
 ```
