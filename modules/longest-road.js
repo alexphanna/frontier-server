@@ -1,4 +1,4 @@
-import { buildings, getPlayerArray } from '../index.js';
+import { game, buildings, getPlayerArray } from '../index.js';
 import { Vertex, Edge } from './geometry.js';
 
 /**
@@ -42,8 +42,23 @@ export default function longestRoad() {
             }
         }
     }
-
-    return { length: maxLength, player: longestPlayer };
+    
+    if (maxLength !== game.longestRoad.length) {
+        for (let i = 0; i < game.players.size; i++) {
+            getPlayerArray()[i].specials["longestRoad"] = false;
+            if (getPlayerArray()[i].specials["longestRoad"]) getPlayerArray()[i].points -= 2;
+        }
+        if (maxLength >= 5) {
+            game.longestRoad.length = maxLength;
+            game.longestRoad.player = longestPlayer;
+            longestPlayer.specials["longestRoad"] = true;
+            longestPlayer.points += 2;
+        }
+        else if (maxLength < 5) {
+            game.longestRoad.length = 0;
+            game.longestRoad.player = null;
+        }
+    }
 }
 
 function overlap(firstRoad, secondRoad) {

@@ -22,11 +22,24 @@ export const game = {
         length: 0,
         player: null
     },
-    map: null
+    map: null,
+    developments: []
+}
+
+export const terrainToResource = {
+    'Forest': 'lumber',
+    'Hill': 'brick',
+    'Mountain': 'ore',
+    'Pasture': 'wool',
+    'Field': 'grain'
 }
 
 export function getPlayerArray() {
     return Array.from(game.players);
+}
+
+export function getTurnPlayer() {
+    return getPlayerArray()[game.turn % game.players.size];
 }
 
 start();

@@ -89,8 +89,3 @@ export function stringifyResources(resources) {
     }
     return joinWithAnd(resourcesArray);
 }
-
-export function stringifyTrade(you, them) {
-    let string = stringifyResources(you) + ' → ' + stringifyResources(them);
-    return string;
-}
