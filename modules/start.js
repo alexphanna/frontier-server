@@ -254,7 +254,25 @@ export default function start() {
 
                 broadcast(String(message));
             }
+            else if (args[0] === 'color') {
+                // close enough
+                if (game.turn !== 0) return;
+                
+                // improve this
+                getPlayerArray()[Array.from(game.clients).indexOf(ws)].color = args[1];
+                broadcastPlayers();
 
+                game.availableColors = Array.from(game.colors);
+                for (let color of game.colors) {
+                    for (let player of getPlayerArray()) {
+                        if (color === player.color) {
+                            game.availableColors.splice(game.availableColors.indexOf(color), 1);
+                            break;
+                        }
+                    }
+                }
+                console.log('available colors: ' + game.availableColors);
+            }
             else if (args[0] === 'end' && args[1] === 'turn') {
                 if (game.turn < game.players.size * 2 - 1) { // can't use round because it is incremented after this
                     if (player.buildings["settlements"] > 4 - game.round) {

@@ -1,12 +1,11 @@
-import { shuffle } from "./utils";
 import { game } from "../index.js";
-import { Player } from "./player";
-import { broadcastPlayers, broadcastPoints } from "./broadcast";
+import Player from "./player.js";
+import { broadcastPlayers, broadcastPoints } from "./broadcast.js";
 
 export function addPlayer(name, ws) {
-    const colors = shuffle(["red", "yellow", "lime", "magenta"]);
-    ws.send('color ' + colors[game.players.size]);
-    game.players.add(new Player(name, colors[game.players.size]));
+    let color = game.availableColors.pop();
+    ws.send('color ' + color);
+    game.players.add(new Player(name, color));
     game.clients.add(ws);
     ws.send('map ' + JSON.stringify(game.map));
     broadcastPlayers();

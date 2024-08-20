@@ -1,4 +1,5 @@
 import start from './modules/start.js';
+import { shuffle } from './modules/utils.js';
 
 export const points = {
     settlementVertices: [],
@@ -12,6 +13,8 @@ export const buildings = {
     roads: []
 }
 
+const colors = shuffle(["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF", "#FF8000", "#FFFFFF"]);
+
 export const game = {
     players: new Set(),
     clients: new Set(),
@@ -23,7 +26,9 @@ export const game = {
         player: null
     },
     map: null,
-    developments: []
+    developments: [],
+    colors: Array.from(colors),
+    availableColors: Array.from(colors)
 }
 
 export const terrainToResource = {
