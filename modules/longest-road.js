@@ -45,8 +45,8 @@ export default function longestRoad() {
     
     if (maxLength !== game.longestRoad.length) {
         for (let i = 0; i < game.players.size; i++) {
-            getPlayerArray()[i].specials["longestRoad"] = false;
             if (getPlayerArray()[i].specials["longestRoad"]) getPlayerArray()[i].points -= 2;
+            getPlayerArray()[i].specials["longestRoad"] = false;
         }
         if (maxLength >= 5) {
             game.longestRoad.length = maxLength;

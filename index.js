@@ -31,6 +31,8 @@ export const game = {
     availableColors: Array.from(colors)
 }
 
+export const mapLengths = [3, 4, 5, 4, 3];
+
 export const terrainToResource = {
     'Forest': 'lumber',
     'Hill': 'brick',

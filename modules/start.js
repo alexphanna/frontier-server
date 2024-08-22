@@ -1,4 +1,4 @@
-import { points, buildings, game, getPlayerArray } from '../index.js';
+import { points, buildings, game, getPlayerArray, terrainToResource } from '../index.js';
 import broadcast, { broadcastPoints, broadcastPlayers, log } from './broadcast.js';
 import { addPlayer } from './server.js';
 import { Tile } from './geometry.js';
@@ -72,6 +72,9 @@ export default function start() {
         buildings.roads.unshift(Array.from(temp2));
     }
 
+    console.log(Tile.adjacentTiles(1,1));
+    console.log(Tile.adjacentTiles(3,1));
+
     wss.on('connection', (ws) => {
         console.log('connected');
 
@@ -80,7 +83,9 @@ export default function start() {
 
             const args = String(message).split(' ');
 
-            var player = game.round === 1 ? Array.from(game.players)[game.players.size - 1 - (game.turn % game.players.size)] : Array.from(game.players)[game.turn % game.players.size];
+            const turnPlayer = game.round === 1 ? Array.from(game.players)[game.players.size - 1 - (game.turn % game.players.size)] : Array.from(game.players)[game.turn % game.players.size];
+
+            const player = getPlayerArray()[Array.from(game.clients).indexOf(ws)];
 
             if (args[0] === 'add') {
                 addPlayer(args[1], ws);
@@ -98,10 +103,11 @@ export default function start() {
             }
             else if (args[0] === 'trade') {
                 if (args[1] === 'domestic') {
-                    let you = Array.from(game.players).find(player => player.name === args[2]);
-                    Trade.offerDomestic(you, JSON.parse(args[3]), JSON.parse(args[4]), JSON.parse(args[5]), args[6]);
+                    Trade.offerDomestic(player, JSON.parse(args[3]), JSON.parse(args[4]), JSON.parse(args[5]), args[6]);
                 }
                 else if (args[1] === 'maritime') {
+                    // check if it's the player's turn
+                    if (turnPlayer.name !== player.name) return;
                     Trade.maritime(player, JSON.parse(args[2]), JSON.parse(args[3]));
                 }
                 else if (args[1] === 'accept') {
@@ -112,10 +118,14 @@ export default function start() {
                 broadcastPlayers();
             }
             else if (args[0] === 'develop') {
+                // check if it's the player's turn
+                if (turnPlayer.name !== player.name) return;
                 player.develop();
                 broadcastPlayers();
             }
             else if (args[0] === 'progress') {
+                // check if it's the player's turn
+                if (turnPlayer.name !== player.name) return;
                 if (args[1] === 'monopoly') {
                     // check if player has monopoly card
                     if (player.developments["monopoly"] === 0) {
@@ -163,6 +173,8 @@ export default function start() {
                 broadcastPlayers();
             }
             else if (args[0] === 'knight' || args[0] === 'rob') {
+                // check if it's the player's turn
+                if (turnPlayer.name !== player.name) return;
                 if (args.length === 1) {
                     if (args[0] === 'knight') {
                         // check if player has knight card
@@ -197,6 +209,8 @@ export default function start() {
                 broadcastPlayers();
             }
             else if (args[0] === 'build') { // e.g., build settlement 0 0 red
+                // check if it's the player's turn
+                if (turnPlayer.name !== player.name) return;
                 if (args[1] === 'settlement') {
                     player.buildSettlement(parseInt(args[2]), parseInt(args[3]));
                 }
@@ -204,7 +218,7 @@ export default function start() {
                     player.buildCity(parseInt(args[2]), parseInt(args[3]));
                 }
                 else if (args[1] === 'road') {
-                    player.buildRoad(parseInt(args[2]), parseInt(args[3]));
+                    player.buildRoad(parseInt(args[2]), parseInt(args[3]), parseInt(args[4]));
                 }
 
                 broadcastPoints();
@@ -223,6 +237,9 @@ export default function start() {
             }
             else if (args[0] === 'robber') {
                 if ((roll === 7 && !robberMoved) || knight) {
+                    // check if the player's whose turn it is is the one moving the robber
+                    if (turnPlayer.name !== player.name) return;
+
                     robber = [parseInt(args[1]), parseInt(args[2])];
 
                     knight = false;
@@ -255,8 +272,8 @@ export default function start() {
                 broadcast(String(message));
             }
             else if (args[0] === 'color') {
-                // close enough
-                if (game.turn !== 0) return;
+                // check if game is ready
+                if (game.ready.size === game.players.size) return;
                 
                 // improve this
                 getPlayerArray()[Array.from(game.clients).indexOf(ws)].color = args[1];
@@ -274,6 +291,7 @@ export default function start() {
                 console.log('available colors: ' + game.availableColors);
             }
             else if (args[0] === 'end' && args[1] === 'turn') {
+                if (player.roadBuilding) return;
                 if (game.turn < game.players.size * 2 - 1) { // can't use round because it is incremented after this
                     if (player.buildings["settlements"] > 4 - game.round) {
                         ws.send(`error You must build a settlement and a road during round ${["one", "two"][game.round]}`);
@@ -310,11 +328,11 @@ export default function start() {
                                     const city = buildings.cities[vertices[k][0]][vertices[k][1]];
                                     if (!isNaN(settlement)) {
                                         const player = getPlayerArray()[settlement];
-                                        player.resources[game.terrainToResource[game.map.terrainMap[i][j]]] += 1;
+                                        player.resources[terrainToResource[game.map.terrainMap[i][j]]] += 1;
                                     }
                                     if (!isNaN(city)) {
                                         const player = getPlayerArray()[city];
-                                        player.resources[game.terrainToResource[game.map.terrainMap[i][j]]] += 2;
+                                        player.resources[terrainToResource[game.map.terrainMap[i][j]]] += 2;
                                     }
                                 }
                             }

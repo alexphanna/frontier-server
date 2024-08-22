@@ -30,11 +30,11 @@ export class Trade {
             }
             if (players.length === game.players.size - 1) {
                 you.client.send('notification Trade offer sent to everyone');
-                log(you.name + ' offered ' + stringifyTrade(you, them) + ' to everyone');
+                log(you.name + ' offered ' + stringifyTrade(yourResources, theirResources) + ' to everyone');
             }
             else {
                 you.cient.send('notification Trade offer sent to ' + joinWithAnd(players));
-                log(you.name + ' offered ' + stringifyTrade(you, them) + ' to ' + joinWithAnd(players));
+                log(you.name + ' offered ' + stringifyTrade(yourResources, theirResources) + ' to ' + joinWithAnd(players));
             }
         }
     }

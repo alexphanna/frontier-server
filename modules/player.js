@@ -41,7 +41,7 @@ export default class Player {
     get client() {
         return Array.from(game.clients)[Array.from(game.players).indexOf(this)];
     }
-    buildRoad(row, col) {
+    buildRoad(row, col, angle) {
         const costs = {
             brick: 1,
             lumber: 1
@@ -95,7 +95,7 @@ export default class Player {
             }
         }
 
-        broadcast(`build road ${row} ${col} ${this.color}`);
+        broadcast(`build road ${row} ${col} ${angle} ${this.color}`);
         log(this.name + ' built a road');
         this.buildings["roads"]--;
         points.roadEdges[row][col] = game.players.size;
@@ -163,13 +163,13 @@ export default class Player {
             return;
         }
 
-        // check if settlement is legal
-        if (!isNaN(points.settlementVertices[row][col])) {
-            this.client.send('error Illegal settlement placement');
-            return;
-        }
-
         if (game.round < 2) {
+            // check if settlement is legal
+            if (!isNaN(points.settlementVertices[row][col])) {
+                this.client.send('error Illegal settlement placement');
+                return;
+            }
+
             // check if player already built a settlement this round
             if (game.round < 2 && this.buildings["settlements"] < 5 - game.round) {
                 this.client.send(`error You may only build one settlement during round ${["one", "two"][game.round]}`);
@@ -200,6 +200,11 @@ export default class Player {
             }
         }
         else if (game.turn >= game.players.size * 2) {
+            // check if settlement is legal
+            if (!points.settlementVertices[row][col].includes(game.turn % game.players.size)) {
+                this.client.send('error Illegal settlement placement');
+                return;
+            }
             // check if player has resources
             if (!this.hasResources(costs)) {
                 this.client.send('error Insufficient resources');
@@ -300,9 +305,9 @@ export default class Player {
             this.client.send('error No developments left');
             return;
         }
-        log(this.player.name + ' developed');
-        this.player.developments[this.developments.shift()]++;
-        this.player.subtractResources(costs);
+        log(this.name + ' developed');
+        this.developments[game.developments.shift()]++;
+        this.subtractResources(costs);
     }
     randomResource() {
         const flatResources = Object.entries(this.resources).flatMap(([key, value]) => Array(value).fill(key));

@@ -1,3 +1,5 @@
+import { Tile } from './geometry.js';
+
 /**
  * Generates a map.
  * 
@@ -14,25 +16,46 @@ export function generateMap() {
     }
     const terrains = Object.keys(terrainCounts);
 
-    var terrainDistr = terrains.flatMap(terrain => Array(terrainCounts[terrain]).fill(terrain));
-    var numberDistr = [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12];
-    shuffle(terrainDistr);
-    shuffle(numberDistr);
-    numberDistr.splice(terrainDistr.indexOf("Desert"), 0, 0);
     let terrainMap = [];
     let numberMap = [];
-    for (let i = 0; i < 5; i++) {
-        terrainMap.push([]);
-        numberMap.push([]);
-    }
-    for (let i = 3; i <= 5; i++) {
-        for (let j = 0; j < i; j++) {
-            terrainMap[i - 3].push(terrainDistr.shift());
-            numberMap[i - 3].push(numberDistr.shift());
-            if (i != 5) {
-                terrainMap[7 - i].push(terrainDistr.shift());
-                numberMap[7 - i].push(numberDistr.shift());
+    let noAdjacentRedTokens = false;
+    while (!noAdjacentRedTokens) {
+        const terrainDistr = terrains.flatMap(terrain => Array(terrainCounts[terrain]).fill(terrain));
+        const numberDistr = [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12];
+        shuffle(terrainDistr);
+        shuffle(numberDistr);
+        numberDistr.splice(terrainDistr.indexOf("Desert"), 0, 0);
+        terrainMap = [];
+        numberMap = [];
+        for (let i = 0; i < 5; i++) {
+            terrainMap.push([]);
+            numberMap.push([]);
+        }
+        for (let i = 3; i <= 5; i++) {
+            for (let j = 0; j < i; j++) {
+                terrainMap[i - 3].push(terrainDistr.shift());
+                numberMap[i - 3].push(numberDistr.shift());
+                if (i != 5) {
+                    terrainMap[7 - i].push(terrainDistr.shift());
+                    numberMap[7 - i].push(numberDistr.shift());
+                }
             }
+        }
+
+        noAdjacentRedTokens = true;
+        for (let i = 0; i < numberMap.length; i++) {
+            for (let j = 0; j < numberMap[i].length; j++) {
+                if (numberMap[i][j] === 6 || numberMap[i][j] === 8) {
+                    for (let tile of Tile.adjacentTiles(i, j)) {
+                        if (numberMap[tile[0]][tile[1]] === 6 || numberMap[tile[0]][tile[1]] === 8) {
+                            noAdjacentRedTokens = false;
+                            break;
+                        }
+                    }
+                    if (!noAdjacentRedTokens) break;
+                }
+            }
+            if (!noAdjacentRedTokens) break;
         }
     }
 
@@ -49,6 +72,8 @@ export function generateMap() {
         [0, 0, 0, 0],
         ["generic", 0, 0, "generic", 0, 0],
     ];
+
+    console.log(terrainMap, numberMap);
     return { terrainMap, numberMap, harborMap };
 }
 

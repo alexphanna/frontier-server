@@ -1,4 +1,4 @@
-import { game, points } from "../index.js";
+import { game, points, mapLengths } from "../index.js";
 
 export class Vertex {
     static adjacentEdges(row, col) {
@@ -94,5 +94,23 @@ export class Tile {
         }
 
         return vertices;
+    }
+    static adjacentTiles(row, col) {
+        let tiles = [];
+
+        // left and right
+        for (let i = (row === 0 ? 1 : -1); i <= (row === mapLengths.length - 1 ? -1 : 1); i+=2) {
+            tiles.push([row, col + i]);
+        }
+
+        // top and bottom
+        for (let i = -1; i <= 1; i+=2) {
+            if ((i === -1 && row > 0) || (i === 1 && row < mapLengths.length - 1)) {
+                tiles.push([row + i, col]);
+                if (col > 0) tiles.push([row + i, col - 1]);
+            }
+        }
+
+        return tiles;
     }
 }
