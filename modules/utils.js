@@ -73,7 +73,6 @@ export function generateMap() {
         ["generic", 0, 0, "generic", 0, 0],
     ];
 
-    console.log(terrainMap, numberMap);
     return { terrainMap, numberMap, harborMap };
 }
 

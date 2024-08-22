@@ -23,6 +23,7 @@ export default function start() {
         }
     }
     let robberMoved = false;
+    let needToDiscard = [];
 
     let knight = false;
     let largestArmyMin = 3;
@@ -71,9 +72,6 @@ export default function start() {
         buildings.roads.push(Array.from(temp2));
         buildings.roads.unshift(Array.from(temp2));
     }
-
-    console.log(Tile.adjacentTiles(1,1));
-    console.log(Tile.adjacentTiles(3,1));
 
     wss.on('connection', (ws) => {
         console.log('connected');
@@ -240,6 +238,11 @@ export default function start() {
                     // check if the player's whose turn it is is the one moving the robber
                     if (turnPlayer.name !== player.name) return;
 
+                    if (needToDiscard.length > 0) {
+                        ws.send('error Wait for players to discard resources before moving the robber');
+                        return;
+                    }
+
                     robber = [parseInt(args[1]), parseInt(args[2])];
 
                     knight = false;
@@ -290,8 +293,12 @@ export default function start() {
                 }
                 console.log('available colors: ' + game.availableColors);
             }
+            else if (args[0] === 'discard') {
+                player.subtractResources(JSON.parse(args[1]));
+                needToDiscard.splice(needToDiscard.indexOf(player), 1);
+                broadcastPlayers();
+            }
             else if (args[0] === 'end' && args[1] === 'turn') {
-                if (player.roadBuilding) return;
                 if (game.turn < game.players.size * 2 - 1) { // can't use round because it is incremented after this
                     if (player.buildings["settlements"] > 4 - game.round) {
                         ws.send(`error You must build a settlement and a road during round ${["one", "two"][game.round]}`);
@@ -309,6 +316,27 @@ export default function start() {
                     broadcast('turn ' + game.turn)
                 }
                 else {
+                    // check if road building is active
+                    if (player.roadBuilding) {
+                        ws.send('error You must build 2 roads');
+                        return;
+                    }
+                    // check if players have to discard resources
+                    if (needToDiscard.length > 0) {
+                        for (let needToDiscardPlayer of needToDiscard) {
+                            needToDiscardPlayer.client.send('error You must discard resources');
+                        }
+                        if (needToDiscard.find(player => player.name === turnPlayer.name) === undefined) {
+                            ws.send('error Players must discard resources');
+                        }
+                        return;
+                    }
+                    // check if player has to move the robber
+                    if (roll === 7 && !robberMoved) {
+                        ws.send('error You must move the robber');
+                        return;
+                    }
+
                     log(player.name + ' ended their turn');
                     game.turn++;
                     game.round = Math.floor(game.turn / game.players.size);
@@ -318,6 +346,15 @@ export default function start() {
                     broadcast('turn ' + game.turn);
                     roll = Math.floor(Math.random() * 6 + 1) + Math.floor(Math.random() * 6 + 1);
                     broadcast('roll ' + roll);
+
+                    if (roll === 7) {
+                        for (let i = 0; i < game.players.size; i++) {
+                            if (Object.values(getPlayerArray()[i].resources).reduce((a, b) => a + b) > 7) {
+                                needToDiscard.push(getPlayerArray()[i]);
+                                getPlayerArray()[i].client.send(`discard ${JSON.stringify(getPlayerArray()[i].resources)}`);
+                            }
+                        }
+                    }
 
                     for (let i = 0; i < game.map.terrainMap.length; i++) {
                         for (let j = 0; j < game.map.terrainMap[i].length; j++) {

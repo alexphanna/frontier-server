@@ -19,11 +19,11 @@ export default class Player {
             largestArmy: false
         }
         this.resources = {
-            brick: 20,
-            grain: 20,
-            lumber: 20,
-            ore: 20,
-            wool: 20
+            brick: 2,
+            grain: 2,
+            lumber: 2,
+            ore: 4,
+            wool: 0
         };
         this.developments = {
             knight: 0,
