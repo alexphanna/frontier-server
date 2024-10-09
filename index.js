@@ -28,7 +28,8 @@ export const game = {
     map: null,
     developments: [],
     colors: Array.from(colors),
-    availableColors: Array.from(colors)
+    availableColors: Array.from(colors),
+    gameover: false
 }
 
 export const mapLengths = [3, 4, 5, 4, 3];

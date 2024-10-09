@@ -85,6 +85,10 @@ export default function start() {
 
             const player = getPlayerArray()[Array.from(game.clients).indexOf(ws)];
 
+            if (game.gameover) {
+                return
+            }
+
             if (args[0] === 'add') {
                 addPlayer(args[1], ws);
             }
@@ -299,6 +303,10 @@ export default function start() {
                 broadcastPlayers();
             }
             else if (args[0] === 'end' && args[1] === 'turn') {
+                if (player.points + player.developments["victoryPoint"] >= 10) {
+                    broadcast(`notification ${player.name} wins!`);
+                    gameover = true;
+                }
                 if (game.turn < game.players.size * 2 - 1) { // can't use round because it is incremented after this
                     if (player.buildings["settlements"] > 4 - game.round) {
                         ws.send(`error You must build a settlement and a road during round ${["one", "two"][game.round]}`);
@@ -344,6 +352,10 @@ export default function start() {
                     // roll dice
                     Array.from(game.clients)[game.turn % game.players.size].send('start turn');
                     broadcast('turn ' + game.turn);
+                    if (Array.from(game.clients)[game.turn % game.players.size].points + Array.from(game.clients)[game.turn % game.players.size].developments["victoryPoint"] >= 10) {
+                        broadcast(`notification ${player.name} wins!`);
+                        game.gameover = true;
+                    }
                     roll = Math.floor(Math.random() * 6 + 1) + Math.floor(Math.random() * 6 + 1);
                     broadcast('roll ' + roll);
 

@@ -39,6 +39,10 @@ export class Trade {
         }
     }
     static acceptDomestic(you, yourResources, them, theirResources, id) {
+        if (!you.hasResources(yourResources)) { // theirResources checked at offer
+            you.client.send('error Insufficient resources');
+            return;
+        }
         you.subtractResources(yourResources);
         you.addResources(theirResources);
         them.subtractResources(theirResources);
